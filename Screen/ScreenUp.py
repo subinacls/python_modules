@@ -83,3 +83,18 @@ RunCMD(addterm(bi.termlist, session_name, 'ls -asl'))
 def wipeup():
  os.popen("/usr/bin/screen -wipe")
 
+############################################
+# import os
+# def startscreen(session_name):
+# scmd = "/usr/bin/screen -d -m -S %s\n" % (session_name)
+# return scmd
+#
+#def addterm(session_name, NewCMD):
+# acmd = "/usr/bin/screen -d -r %s -X stuff '%s\n'" % (session_name, NewCMD)
+# return acmd
+#
+#def RunCMD(DoCMD):
+# os.popen(DoCMD)
+#
+#RunCMD(startscreen("testing"))
+#RunCMD(addterm("testing", "pwd\n"))
