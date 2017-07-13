@@ -1,0 +1,41 @@
+#
+# Useful IPtables information which I have used in the past to assist in net configuration
+# Taken from Streisand Server Setup from Chef
+#
+# Allow traffic initiated from VPN to access LAN
+iptables -I FORWARD -i tun0 -o ens160 -s 10.8.0.0/24 -d 10.1.10.0/24 -m conntrack --ctstate NEW -j ACCEPT
+
+# Allow traffic initiated from VPN to access "the world"
+iptables -I FORWARD -i tun0 -o ens160 -s 10.8.0.0/24 -m conntrack --ctstate NEW -j ACCEPT
+
+# Allow traffic initiated from LAN to access "the world"
+iptables -I FORWARD -i tun0 -o ens160 -s 192.168.0.0/24 -m conntrack --ctstate NEW -j ACCEPT
+
+# Allow established traffic to pass back and forth
+iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+# Notice that -I is used, so when listing it (iptables -vxnL) it
+# will be reversed.  This is intentional in this demonstration.
+# Masquerade traffic from VPN to "the world" -- done in the nat table
+iptables -t nat -I POSTROUTING -o ens160 -s 10.8.0.0/24 -j MASQUERADE
+
+# Masquerade traffic from LAN to "the world"
+iptables -t nat -I POSTROUTING -o ens160 -s 10.1.10.0/24 -j MASQUERADE
+
+# Transparent Proxy
+iptables -t nat -A OUTPUT -m owner --uid-owner debian-tor -j RETURN
+iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 53
+
+# avoid blocking local loopback
+iptables -t nat -A OUTPUT -d 127.0.0.0/9 -j RETURN
+iptables -t nat -A OUTPUT -d 127.128.0.0/10 -j RETURN
+
+# redirect all tcp traffic to TransPort
+iptables -t nat -A OUTPUT -p tcp --syn -j REDIRECT --to-ports 9040
+iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# avoid blocking local loopback
+iptables -A OUTPUT -d 127.0.0.0/8 -j ACCEPT
+
+iptables -A OUTPUT -m owner --uid-owner 116 -j ACCEPT
+iptables -A OUTPUT -j REJECT
