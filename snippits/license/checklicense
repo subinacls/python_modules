@@ -1,0 +1,12 @@
+def checklicense():
+  import datetime
+  l=datetime.date(2018, 8, 30)
+  t = datetime.date.today()
+  d = t-l
+  if (d.days >= 0):
+   print "License Expired"
+  else:
+   d = l-t
+   print "License Expires in: " + str(d.days)
+
+checklicense()
