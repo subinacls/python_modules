@@ -1,0 +1,20 @@
+# BubbleSort Example to sort a list with given direction
+# Uses a list [] of items and then user gives the direction with "< or >"
+# Direction helps set low to high, or high to low sorting
+def bsort(MyList, direction):
+ for i in range(0, len(MyList)-1):
+  for j in range(0, len(MyList) - i -1):
+   if direction == ">":
+    if MyList[j] > MyList[j+1]:
+     MyList[j], MyList[j+1] = MyList[j+1],  MyList[j]
+   if direction == "<":
+    if MyList[j] < MyList[j+1]:
+     MyList[j], MyList[j+1] = MyList[j+1],  MyList[j]
+ return MyList
+
+MyList=[100,45,76,34,101,44,24,999]
+bsort(MyList, "<")
+bsort(MyList, ">")
+MyList=["a","f","r","g","y","e","p","q","z","d","b"]
+bsort(MyList, "<")
+bsort(MyList, ">")
