@@ -1,20 +1,68 @@
+# Make a randomized list of numbers:
+
+def makenewlist(newlength):
+ import random
+ newlist = []
+ for x in range(0,newlength):
+  newlist.append(x)
+ random.shuffle(newlist)
+ return newlist
+
 # BubbleSort Example to sort a list with given direction
 # Uses a list [] of items and then user gives the direction with "< or >"
 # Direction helps set low to high, or high to low sorting
-def bsort(MyList, direction):
- for i in range(0, len(MyList)-1):
-  for j in range(0, len(MyList) - i -1):
+def bsort(newlist, direction):
+ for i in range(0, len(newlist)-1):
+  for j in range(0, len(newlist) - i -1):
    if direction == ">":
-    if MyList[j] > MyList[j+1]:
-     MyList[j], MyList[j+1] = MyList[j+1],  MyList[j]
+    if newlist[j] > newlist[j+1]:
+     newlist[j], newlist[j+1] = newlist[j+1],  newlist[j]
    if direction == "<":
-    if MyList[j] < MyList[j+1]:
-     MyList[j], MyList[j+1] = MyList[j+1],  MyList[j]
- return MyList
+    if newlist[j] < newlist[j+1]:
+     newlist[j], newlist[j+1] = newlist[j+1],  newlist[j]
+ return newlist
 
-MyList=[100,45,76,34,101,44,24,999]
-bsort(MyList, "<")
-bsort(MyList, ">")
-MyList=["a","f","r","g","y","e","p","q","z","d","b"]
-bsort(MyList, "<")
-bsort(MyList, ">")
+testlist=[100,45,76,34,101,44,24,999]
+bsort(testlist, "<")
+bsort(testlist, ">")
+testlist=["a","f","r","g","y","e","p","q","z","d","b"]
+bsort(testlist, "<")
+bsort(testlist, ">")
+bsort(newlist, "<")
+bsort(newlist, ">")
+
+########## MERGE SORT EXAMPLE ###############
+def msort(newlist, direction):
+    if len(newlist)>1:
+        mid = len(newlist)//2
+        lhalf = newlist[:mid]
+        rhalf = newlist[mid:]
+        msort(lhalf, direction)
+        msort(rhalf, direction)
+        i=0
+        j=0
+        k=0
+        while i < len(lhalf) and j < len(rhalf):
+            if lhalf[i] < rhalf[j]:
+                newlist[k]=lhalf[i]
+                i=i+1
+            else:
+                newlist[k]=rhalf[j]
+                j=j+1
+            k=k+1
+        while i < len(lhalf):
+            newlist[k]=lhalf[i]
+            i=i+1
+            k=k+1
+        while j < len(rhalf):
+            newlist[k]=rhalf[j]
+            j=j+1
+            k=k+1
+    if direction == "<":
+     return newlist
+    else:
+     return list(reversed(newlist))
+
+tl = makenewlist(10000)
+msort(tl,"<")
+msort(tl,">")
