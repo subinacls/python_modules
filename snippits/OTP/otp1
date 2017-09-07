@@ -1,0 +1,225 @@
+from __future__ import with_statement
+
+import sys
+import os.path
+import optparse
+
+try:
+    import psyco
+    from psyco.classes import *
+except ImportError:
+    pass
+
+class OneTimePad(object):
+    # Buffer size for file access
+    block_size = 65536
+    # Paranoid mode (use /dev/random instead of the faster /dev/urandom)
+    paranoid = False
+    # Placeholder for random generator device (open file)
+    dev = None
+    # Check for the presence of the required random generator device
+    def check_dev(self):
+        if self.paranoid:
+            return os.path.exists('/dev/random')
+        return os.path.exists('/dev/urandom')
+    # Generate a string of random bytes
+    def random(self, size):
+        if not self.dev:
+            if self.paranoid:
+                self.dev = open('/dev/random', 'r')
+            else:
+                self.dev = open('/dev/urandom', 'r')
+        return self.dev.read(size)
+    # Get the size of an open file
+    def filesize(self, fd):
+        fd.seek(0,2)
+        n = fd.tell()
+        fd.seek(0,0)
+        return n
+    # Generate a random one-time pad
+    def generate(self, padfile, total_size):
+        random = self.random
+        block_size = self.block_size
+        while total_size > 0:
+            block = random( min(block_size, total_size) )
+            padfile.write(block)
+            total_size = total_size - len(block)
+
+    # Encrypt or decrypt a file using a one-time pad
+    def cipher(self, infile, outfile, padfile):
+        block_size = self.block_size
+        while 1:
+            data = infile.read(block_size)
+            if not data:
+                break
+            pad = padfile.read(len(data))
+            encoded = ''.join([ chr(ord(a) ^ ord(b)) for a, b in zip(data, pad) ])
+            outfile.write(encoded)
+
+    # Main function (most of it is command line parsing stuff)
+    def run(self):
+        # Define a command line parser
+        banner = (
+            "OTP\n"
+        )
+        usage = (
+            "Create a one-time pad:\n"
+        )
+        formatter = MyHelpFormatter(banner, max_help_position=26)
+        parser = optparse.OptionParser(usage=usage, formatter=formatter)
+        parser.add_option("-t", "--text", action="store", type="string",
+                          metavar="FILE", help="plaintext filename")
+        parser.add_option("-c", "--cipher", action="store", type="string",
+                          metavar="FILE", help="ciphertext filename")
+        parser.add_option("-k", "--key", action="store", type="string",
+                          metavar="FILE", help="one-time pad filename")
+        parser.add_option("-s", "--size", action="store", type="int",
+                          metavar="NUM", help="one-time pad size in bytes")
+        parser.add_option("-f", "--force", action="store_true", default=False,
+                          help="force overwriting of any output files")
+        parser.add_option("-p", "--paranoid", action="store_true", default=False,
+                          help="use /dev/random instead of /dev/urandom (slower!)")
+
+        # Parse the command line
+        args = list(sys.argv)
+        if len(args) == 1:
+            args = args + [ '--help' ]
+        options, args = parser.parse_args(args)
+
+        # Set paranoid mode if requested
+        self.paranoid = options.paranoid
+
+        # Check command is present
+        if len(args) < 2:
+            parser.error("missing command")
+        command = args[1].strip().lower()[0:1]
+        if not command:
+            parser.error("missing command")
+
+        # If more parameters are present, try to guess what they are
+        if len(args) > 2:
+            p = 2
+            try:
+                if command == 'g':
+                    # g key size
+                    # g key text
+                    if not options.key:
+                        options.key = args[p]
+                        p = p + 1
+                    try:
+                        options.size = int(args[p])
+                        p = p + 1
+                    except ValueError:
+                        options.text = args[p]
+                        p = p + 1
+                elif command == 'e':
+                    # e text key cipher
+                    if not options.text:
+                        options.text = args[p]
+                        p = p + 1
+                    if not options.key:
+                        options.key = args[p]
+                        p = p + 1
+                    if not options.cipher:
+                        options.cipher = args[p]
+                        p = p + 1
+                elif command == 'd':
+                    # d cipher key text
+                    if not options.cipher:
+                        options.cipher = args[p]
+                        p = p + 1
+                    if not options.key:
+                        options.key = args[p]
+                        p = p + 1
+                    if not options.text:
+                        options.text = args[p]
+                        p = p + 1
+                else:
+                    parser.error("too many arguments")
+            except IndexError:
+                pass
+            if p < len(args):
+                parser.error("too many arguments")
+
+        # The one-time pad filename is always required
+        if not options.key:
+            parser.error("missing one-time pad filename")
+
+        # Plaintext and ciphertext files are required for "decrypt" and "encrypt"
+        if command in ('d', 'e'):
+            if not options.text:
+                parser.error("missing plaintext filename")
+            if not options.cipher:
+                parser.error("missing ciphertext filename")
+
+        # Generate a one-time pad file
+        if command == 'g':
+            if options.cipher:
+                parser.error("unused argument: ciphertext filename")
+            if not self.check_dev():
+                parser.error("random generator not available")
+            if not options.force and os.path.exists(options.key):
+                parser.error("file already exists: %s" % options.key)
+            if options.text:
+                if not os.path.exists(options.text):
+                    parser.error("can't find file: %s" % options.text)
+                with open(options.text, 'r') as textfile:
+                    size = self.filesize(textfile)
+            elif options.size:
+                size = options.size
+            else:
+                parser.error("either plaintext file or one-time pad size is required")
+            with open(options.key, 'w') as padfile:
+                self.generate(padfile, size)
+
+        # Encrypt a file using a one-time pad
+        elif command == 'e':
+            if not os.path.exists(options.key):
+                parser.error("can't find file: %s" % options.key)
+            if not os.path.exists(options.text):
+                parser.error("can't find file: %s" % options.text)
+            if not options.force and os.path.exists(options.cipher):
+                parser.error("file already exists: %s" % options.cipher)
+            with open(options.key, 'r') as padfile:
+                with open(options.text, 'r') as textfile:
+                    if self.filesize(textfile) > self.filesize(padfile):
+                        raise RuntimeError("Not enough bytes in the one-time pad for this file!")
+                    with open(options.cipher, 'w') as cipherfile:
+                        self.cipher(textfile, cipherfile, padfile)
+
+        # Decrypt a file using a one-time pad
+        elif command == 'd':
+            if not os.path.exists(options.key):
+                parser.error("can't find file: %s" % options.key)
+            if not os.path.exists(options.cipher):
+                parser.error("can't find file: %s" % options.cipher)
+            if not options.force and os.path.exists(options.text):
+                parser.error("file already exists: %s" % options.text)
+            with open(options.key, 'r') as padfile:
+                with open(options.cipher, 'r') as cipherfile:
+                    if self.filesize(cipherfile) > self.filesize(padfile):
+                        raise RuntimeError("Not enough bytes in the one-time pad for this file!")
+                    with open(options.text, 'w') as textfile:
+                        self.cipher(cipherfile, textfile, padfile)
+
+        # Unknown command
+        else:
+            parser.error("unknown command: %s" % args[1])
+
+# Just a small tweak to optparse to be able to print a banner.
+# (Why is there an epilog but no prolog in optparse?)
+class MyHelpFormatter(optparse.IndentedHelpFormatter):
+    def __init__(self, banner, *argv, **argd):
+        self.banner = banner
+        optparse.IndentedHelpFormatter.__init__(self, *argv, **argd)
+    def format_usage(self, usage):
+        msg = optparse.IndentedHelpFormatter.format_usage(self, usage)
+        return '%s\n%s' % (self.banner, msg)
+
+# Run from the command line, try to use Psyco for acceleration
+if __name__ == "__main__":
+    try:
+        psychopy.full()
+    except NameError:
+        pass
+    OneTimePad().run()
