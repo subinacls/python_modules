@@ -1,9 +1,9 @@
 def validate_devices():
 	# ensures no tampering with given directories
 	# uses known signatures of files and devices
-  # takes  JSON dump of the values of remote system
+  	# takes  JSON dump of the values of remote system
 	import netifaces ## might need to pip this module on your system
-  global validdevs
+  	global validdevs
 	validdevs = {}
 	# get system UUID
 	uuid=os.popen('dmidecode | grep UUID').readlines()
