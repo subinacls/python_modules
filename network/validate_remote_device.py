@@ -19,7 +19,7 @@ def validate_devices():
 			validdevs['MACS'][str(x)] = str(netifaces.ifaddresses(x)[netifaces.AF_LINK][0]['addr'])
 	# get usb devices
 	usbdevids=os.popen('lsusb | cut -d" " -f6-').readlines()
-	validdevs['USB'] = {}
+	validdevs['USBS'] = {}
 	for xudevs in usbdevids:
 		xudevn = str(xudevs).split(" ")[0].strip()
 		xudevns = " ".join(str(xudevs).split(" ")[1::])
